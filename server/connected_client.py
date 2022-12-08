@@ -1,9 +1,12 @@
 import asyncio
+import logging
+import uuid
 from asyncio.streams import StreamReader, StreamWriter
 from collections import UserList
 from datetime import timedelta
 from typing import Callable, Iterable, Optional
-import uuid
+
+logger = logging.getLogger(__name__)
 
 
 class ChatRoom:
@@ -31,7 +34,7 @@ class ChatConnection:
         self._on_disconnect_callback = on_disconnect
 
     @property
-    def id(self):
+    def id_(self):
         return str(self._id)
 
     async def send_message(self, message: str):
@@ -39,17 +42,17 @@ class ChatConnection:
         await self._writer.drain()
 
     async def wait_imcoming_message(self):
-        print('task waiter run....')
+        logger.info('task waiter run....')
         while True:
             raw_msg = await self._reader.read(1024)
             if not raw_msg:
                 break
 
-            print(f'receive msg: {raw_msg.decode()}')
+            logger.info(f'receive msg: {raw_msg.decode()}')
 
-        print('end')
+        logger.info('end')
         self._writer.close()
-        self._on_disconnect_callback(self.id)
+        self._on_disconnect_callback(self.id_)
 
 
 class ConnectionsList(UserList):
@@ -64,24 +67,24 @@ class ConnectionsList(UserList):
         self.data.append(item)
 
     def remove(self, id_: str):
-        print('start remove by id', id_)
+        logger.info('start remove by id', id_)
 
         data = self.data.copy()
         for connection in filter(lambda c: c.id == id_, data):
             self.data.remove(connection)
 
-        print('after filtered ')
+        logger.info('after filtered ')
 
 
 class ConnectedUser:
 
     def __init__(
-        self,
-        reader: StreamReader,    # чтение сообщений от сервера
-        writer: StreamWriter,    # запись сообщений в сокет 
-        name: str,    # имя пользователя 
-        limit_messages_at_period: int = 20,
-        period: timedelta = timedelta(minutes=60.0)
+            self,
+            reader: StreamReader,    # чтение сообщений от сервера
+            writer: StreamWriter,    # запись сообщений в сокет
+            name: str,    # имя пользователя
+            limit_messages_at_period: int = 20,
+            period: timedelta = timedelta(minutes=60.0),
     ) -> None:
         # делаем временные подключения, чтобы запросить имя пользователя
         self._temp_writer = writer
@@ -94,30 +97,28 @@ class ConnectedUser:
 
     @property
     def connections(self):
-        ''' Клиентские соединения '''
+        """ Клиентские соединения """
         return self._connections
-
-    def disconnect_connection(self, id_: str):
-        print('start disconnect')
-        self._connections.remove(id_)
-        print('call disconnect', len(self._connections))
 
     @property
     def name(self):
         return self._name
 
+    def disconnect_connection(self, id_: str):
+        logger.info('start disconnect')
+        self._connections.remove(id_)
+        logger.info('call disconnect', len(self._connections))
+
     def increment_send_messages(self) -> None:
         self._send_messages += 1
 
     async def send_message(self, message: str):
-        ''' Отправлка сообщений всем инстансам подключений пользователя '''
+        """ Отправлка сообщений всем инстансам подключений пользователя """
         self.increment_send_messages()
-        print(f'user: {self.name} sended: {self._send_messages}')
+        logger.info(f'user: {self.name} sended: {self._send_messages}')
         for con in self._connections:
             await con.send_message(message)
 
     def add_connection(self, reader: StreamReader, writer: StreamWriter):
-        task = ChatConnection(reader=reader,
-                              writer=writer,
-                              on_disconnect=self.disconnect_connection)
-        self._connections.append()
+        self._connections.append(
+            ChatConnection(reader=reader, writer=writer, on_disconnect=self.disconnect_connection))

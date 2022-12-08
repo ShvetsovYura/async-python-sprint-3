@@ -1,7 +1,10 @@
 import asyncio
+import logging
 from asyncio.streams import StreamReader, StreamWriter
 
 from server.connected_client import ChatRoom, ConnectedUser
+
+logger = logging.getLogger(__name__)
 
 
 class Server:
@@ -13,7 +16,7 @@ class Server:
         self._rooms: dict[str, ChatRoom] = {'shared': ChatRoom('shared')}
 
     def listen(self):
-        print(f'server start at {self._host}:{self._port}')
+        logger.info(f'server start at {self._host}:{self._port}')
         asyncio.run(self._start_server())
 
     async def _start_server(self):

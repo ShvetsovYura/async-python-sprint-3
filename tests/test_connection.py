@@ -1,4 +1,3 @@
-import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 from client import Client

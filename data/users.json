@@ -1,0 +1,8 @@
+[
+  {
+    "username": "pipa",
+    "user_id": "user_id",
+    "chats_ids": ["1", "2"],
+    "messages_in_period":1
+  }
+]
