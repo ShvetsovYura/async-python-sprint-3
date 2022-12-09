@@ -1,8 +1,18 @@
 [
   {
-    "username": "pipa",
-    "user_id": "user_id",
-    "chats_ids": ["1", "2"],
-    "messages_in_period":1
+    "id_": "70e2ae9d-524b-4b90-9252-0398d81d34f5",
+    "name": "pipa",
+    "password": "1234",
+    "rooms": [
+      "edb74300-247c-494a-9eed-308d69667ff3"
+    ],
+    "login": "asdflka",
+    "blocked_in_chats": {
+      "public": null
+    },
+    "complaints": 0,
+    "messages_in_chats": {
+      "public": 0
+    }
   }
 ]

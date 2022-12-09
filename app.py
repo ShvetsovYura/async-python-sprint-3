@@ -6,7 +6,7 @@ from datetime import datetime
 
 import yaml
 
-from exceptions import BadRequestDataError, ResponseError, UserNotFoundError
+from exceptions import BadRequestDataError, UserNotFoundError
 from http_consts import HTTPMethod
 from http_request import HttpRequest
 from http_response import HttpResponse
@@ -22,14 +22,6 @@ logger = logging.getLogger(__name__)
 mgr = DataManager()
 
 srv = WebServer(port=8008)
-
-
-async def check_headers_middleware(req, res: HttpResponse):
-    logger.warning('EMPTY middleware ')
-    res.status_code = 401
-
-    raise ResponseError(res)
-    return req, res
 
 
 @srv.route('/main', method=HTTPMethod.GET, middlewares=[check_auth])

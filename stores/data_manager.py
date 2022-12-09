@@ -4,23 +4,12 @@ from exceptions import OverflowSendMessagesUserBlocked, UserLoginAlreadyExists
 from stores.message import ChatMessage
 from stores.messages_store import MessagesStore
 from stores.rooms_store import RoomStore
+from stores.singleton import SingletonType
 from stores.user import User
 from stores.users_store import UsersStore
 
 
-def get_messages_store():
-    return MessagesStore()
-
-
-def get_rooms_store():
-    return RoomStore()
-
-
-def get_users_store():
-    return UsersStore()
-
-
-class DataManager:
+class DataManager(metaclass=SingletonType):
 
     def __init__(self) -> None:
         self._users_store = UsersStore()
@@ -48,7 +37,7 @@ class DataManager:
             raise UserLoginAlreadyExists()
 
         rooms = self.rooms_store.get_rooms_by_name('public')
-        self.users_store.users.append(
+        self.users_store.add_user(
             User(id_=str(uuid.uuid4()), name=name, login=login, password=pwd,
                  rooms=[rooms[0].id_]))
 

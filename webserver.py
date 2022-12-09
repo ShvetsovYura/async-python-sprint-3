@@ -9,13 +9,11 @@ from exceptions import BadRequestDataError, NotAuthorizedError, ResponseError
 from http_consts import HTTPMethod
 from http_request import HttpRequest
 from http_response import HttpResponse
-from stores.messages_store import MessagesStore
-from stores.users_store import UsersStore
+from stores.data_manager import DataManager
 
 logger = logging.getLogger(__name__)
 
-users_store = UsersStore()
-messages_store = MessagesStore()
+mgr = DataManager()
 
 
 class RouteData(TypedDict):
@@ -35,8 +33,10 @@ class WebServer:
 
     async def listen(self):
         logger.info(f'server start at {self._host}:{self._port}')
-        asyncio.create_task(messages_store.dump_message())
-        asyncio.gather(*[user.reset_message_count() for user in users_store.users])
+        asyncio.create_task(mgr.messages_store.dump_records())
+        asyncio.create_task(mgr.users_store.dump_records())
+        asyncio.create_task(mgr.rooms_store.dump_records())
+        # asyncio.gather(*[user.reset_message_count() for user in users_store.users])
 
         await asyncio.create_task(self._start_server())
 
