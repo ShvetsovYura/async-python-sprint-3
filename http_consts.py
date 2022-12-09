@@ -4,6 +4,7 @@ status_codes = {
     200: 'OK',
     201: 'Created',
     401: 'Unauthorized',
+    403: 'Forbidden',
     404: 'Not found',
     405: 'Method Not Allowed',
     422: 'Unprocessable Entity',

@@ -14,3 +14,23 @@ class ValidateEntityError(Exception):
 
 class OverflowSendMessagesUserBlocked(Exception):
     pass
+
+
+class NotAuthorizedError(Exception):
+    pass
+
+
+class UserNotFoundError(Exception):
+    pass
+
+
+class BadRequestDataError(Exception):
+    pass
+
+
+class RoomNameExistsUsedError(Exception):
+    pass
+
+
+class UserLoginAlreadyExists(Exception):
+    pass

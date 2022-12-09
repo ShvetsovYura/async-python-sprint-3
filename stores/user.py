@@ -19,14 +19,21 @@ def get_default_blocks() -> dict[str, Optional[datetime]]:
 class User:
     id_: str
     name: str
-    chats: list[str]
+    password: str
+    rooms: list[str]
 
+    login: str = 'user'
     blocked_in_chats: dict[str, Optional[datetime]] = field(default_factory=get_default_blocks)
     complaints: int = 0
     messages_in_chats: dict[str, int] = field(default_factory=get_default_chat)
 
     def is_blocked_in_chat(self, chat_id):
         return self.blocked_in_chats[chat_id]
+
+    def check_login_password(self, login: str, password: str):
+        if login == self.login and password == self.password:
+            return True
+        return False
 
     def increase_message_in_chat(self, chat_id: str):
 

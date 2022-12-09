@@ -5,20 +5,17 @@ from asyncio.streams import StreamReader, StreamWriter
 from datetime import datetime
 from typing import Callable, Optional, TypedDict
 
-import yaml
-
-from exceptions import ResponseError, ValidateEntityError
+from exceptions import BadRequestDataError, NotAuthorizedError, ResponseError
 from http_consts import HTTPMethod
 from http_request import HttpRequest
 from http_response import HttpResponse
-from message import ChatMessage
 from stores.messages_store import MessagesStore
 from stores.users_store import UsersStore
 
 logger = logging.getLogger(__name__)
 
 users_store = UsersStore()
-messages_store = MessagesStore(users_store=users_store)
+messages_store = MessagesStore()
 
 
 class RouteData(TypedDict):
@@ -82,10 +79,8 @@ class WebServer:
 
         route = self._router.get(request.path)
         response = HttpResponse()
-        response.headers = {
-            'Content-Type': 'application/json; charset=utf-8',
-            'x-powered-by': 'simple-json-server',
-        }
+        response.add_header({'Content-Type': 'application/json; charset=utf-8'})
+        response.add_header({'x-powered-by': 'simple-json-server'})
 
         if not route:
             # если не найдено роута
@@ -94,7 +89,7 @@ class WebServer:
             _handler = route.get('handler')
             _method = route.get('method')
             _middlewares = route.get('middlewares', [])
-            _kwargs = route.get('kwargs')
+            # _kwargs = route.get('kwargs')
 
             if _method != request.method:
                 # если данный роут вызван с другим HTTP методом
@@ -102,6 +97,7 @@ class WebServer:
 
             for middleware in _middlewares:
                 request, response = await middleware(request, response)
+
             # вызов метода-обработчика роута
             # здесь не дает другим обработчикам работать
             response = await _handler(request, response)
@@ -116,7 +112,7 @@ class WebServer:
         await writer.drain()
 
     async def _handle_request(self, reader: StreamReader, writer: StreamWriter):
-
+        response = HttpResponse()
         try:
             logger.info(f's read: {datetime.now()}')
             raw_data = await self._read_stream(reader)
@@ -128,79 +124,21 @@ class WebServer:
 
             request = HttpRequest(raw_data)
             logger.info(f's hand: {datetime.now()}')
-            response = await asyncio.create_task(self._handle_router(request))
+            response = await self._handle_router(request)
             logger.info(f'e hand: {datetime.now()}')
 
             await self._write_response(writer, response)
+        except BadRequestDataError:
+            response.status_code = 422
+            await self._write_response(writer, response=response)
+        except NotAuthorizedError:
+            response.status_code = 401
+            await self._write_response(writer, response=response)
         except ResponseError as e:
             await self._write_response(writer, e.response)
         except Exception as e:
-            logger.error(e)
+            logger.debug(e)
+            logger.exception(e)
         finally:
             logger.info(f'f reqs: {datetime.now()}')
             writer.close()
-
-
-srv = WebServer(port=8008)
-
-
-async def check_headers_middleware(req, res: HttpResponse):
-    logger.warning('EMPTY middleware ')
-    res.status_code = 401
-
-    raise ResponseError(res)
-    return req, res
-
-
-@srv.route('/main', method=HTTPMethod.GET, middlewares=[check_headers_middleware])
-async def handler(request: HttpRequest, response: HttpResponse) -> HttpResponse:
-    start = datetime.now()
-    await asyncio.sleep(1)
-    response.json = {'result': {'start': str(start), 'end': str(datetime.now())}}
-    return response
-
-
-@srv.route('/signin', method=HTTPMethod.POST)
-async def sign_in():
-    pass
-
-
-@srv.route('/send_message', method=HTTPMethod.POST)
-async def send_message(req: HttpRequest, res: HttpResponse):
-    chat_id = req.qs.get('chat_id')
-    if not chat_id:
-        raise Exception('Не указан параметр: chat_id')
-
-    data = req.json
-    data['chat_id'] = chat_id[0]
-
-    try:
-        message = ChatMessage(**data)
-    except Exception:
-        res.status_code = 422
-        res.json = {'result': 'Не удалось провалидировать модель'}
-        raise ValidateEntityError(res)
-
-    messages_store.add_message(message)
-
-    res.status_code = 201
-    return res
-
-
-@srv.route('/signup', method=HTTPMethod.POST)
-async def sign_up() -> tuple[int, Optional[dict]]:
-
-    return (202, {'result': 'welcome'})
-
-
-if __name__ == '__main__':
-    with open('log-config.yml', 'r') as stream:
-        cfg = yaml.safe_load(stream)
-
-    logging.config.dictConfig(cfg.get('logging'))
-    asyncio.run(srv.listen())
-
-# TODO: надо бы мидлвари прикрутить
-# TODO: парсинг query-string
-# TODO: надо бы парсить куки, а то как считать сессии
-# TODO: Почему обработчики не вызываются конкурентно?

@@ -11,8 +11,8 @@ class EnhancedJsonEncoder(json.JSONEncoder):
     def default(self, serialized_object: Any) -> Any:
 
         serialized_types = {
-            datetime: lambda: serialized_object.strftime("%Y-%m-%d %H:%M:%S"),
-            date: lambda: serialized_object.strftime("%Y-%m-%d"),
+            datetime: lambda: serialized_object.strftime('%Y-%m-%d %H:%M:%S'),
+            date: lambda: serialized_object.strftime('%Y-%m-%d'),
             Decimal: lambda: str(serialized_object),
             Enum: lambda: serialized_object.name,
             timedelta: lambda: serialized_object.total_seconds(),
