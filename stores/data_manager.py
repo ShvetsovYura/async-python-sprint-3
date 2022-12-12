@@ -55,8 +55,19 @@ class DataManager(metaclass=SingletonType):
         user = self._users_store.get_user_by_id(user_id)
 
         # непрочитанные сообщения для пользователя
+        # выборка всех сообщений, где пользователь не является отправителем
+        # и не содержится в списке прочитавших
+        # а также пользвоатель состоит в списке этого чата
+
         _unread_messages = filter(
-            lambda msg: msg.chat_id in user.rooms and user_id not in msg.read_users,
-            self.messages_store.get_messages())
+            lambda msg: msg.chat_id in user.rooms and user_id not in msg.read_users and user_id !=
+            msg.user_id, self.messages_store.get_messages())
 
         return list(_unread_messages)
+
+    def set_messages_user_read_status(self, messages_ids: list[str], user_id: str):
+        for msg in self.messages_store.messages:
+            for message_id in messages_ids:
+
+                if msg.id_ == message_id:
+                    msg.read_users.extend([user_id])

@@ -8,15 +8,17 @@ class SignInRequestModel:
     login: str
     password: str
 
+
 @dataclass
 class SingUpRequestModel(SignInRequestModel):
     name: str
+
 
 @dataclass
 class MessageRequestModel:
     user_id: str
     chat_id: str
-    parent_id: str
     message: str
 
-    delivery_at: Optional[datetime]
+    parent_id: Optional[str] = None
+    delivery_at: Optional[datetime] = None

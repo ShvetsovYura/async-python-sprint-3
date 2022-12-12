@@ -12,7 +12,12 @@ async def check_auth(request: HttpRequest,
     if not request._cookies:
         raise NotAuthorizedError()
 
-    session_value = request._cookies.get('Cookie').value
+    cookie_values = request._cookies.get('Cookie')
+    if not cookie_values:
+        raise NotAuthorizedError()
+
+    session_value = cookie_values.value.split('=')[1]
+
     if not session_value:
         raise NotAuthorizedError()
 

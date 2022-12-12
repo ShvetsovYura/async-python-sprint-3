@@ -1,3 +1,4 @@
+from ctypes import Union
 import json
 from http import cookies
 from typing import Optional
@@ -32,8 +33,20 @@ class HttpRequest:
         return self._path
 
     @property
-    def json(self) -> dict:
-        return self._data or {}
+    def json(self):
+        return self._data
+
+    def get_parsed_cookies(self) -> dict:
+        parsed_cookies = {}
+        if not self._cookies:
+            return {}
+
+        for _, morsel in self._cookies.items():
+            if morsel.value:
+                splitted_values = morsel.value.split('=')
+                parsed_cookies[splitted_values[0]] = splitted_values[1]
+
+        return parsed_cookies
 
     @property
     def qs(self):

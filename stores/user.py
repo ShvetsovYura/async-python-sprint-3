@@ -28,7 +28,12 @@ class User:
     messages_in_chats: dict[str, int] = field(default_factory=get_default_chat)
 
     def is_blocked_in_chat(self, chat_id):
-        return self.blocked_in_chats[chat_id]
+        # если пользователя нет в списке банов
+        chat_blocked_status = self.blocked_in_chats.get(chat_id)
+        if not chat_blocked_status:
+            return False
+        else:
+            return chat_blocked_status
 
     def check_login_password(self, login: str, password: str):
         if login == self.login and password == self.password:

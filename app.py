@@ -52,21 +52,27 @@ async def sign_in(request: HttpRequest, response: HttpResponse):
 
 
 @srv.route('/send_message', method=HTTPMethod.POST, middlewares=[check_auth])
-async def send_message(req: HttpRequest, res: HttpResponse):
+async def send_message(request: HttpRequest, response: HttpResponse):
 
-    chat_id = req.qs.get('chat_id')
+    chat_id = request.qs.get('chat_id')
     if not chat_id:
+        raise BadRequestDataError
+    cookies_ = request.get_parsed_cookies()
+
+    user_id = cookies_.get('session')
+    if not user_id:
         raise BadRequestDataError
 
     try:
-        message = MessageRequestModel(chat_id=chat_id[0], **req.json)
-    except TypeError:
+        message = MessageRequestModel(chat_id=chat_id[0], user_id=user_id, **request.json)
+    except TypeError as e:
+        logger.exception(e)
         raise BadRequestDataError
 
     mgr.add_message(ChatMessage(**dataclasses.asdict(message)))
 
-    res.status_code = 201
-    return res
+    response.status_code = 201
+    return response
 
 
 @srv.route('/signup', method=HTTPMethod.POST)
@@ -86,16 +92,28 @@ async def sign_up(request: HttpRequest, response: HttpResponse):
 
 @srv.route('/get_unread_messages', method=HTTPMethod.GET, middlewares=[check_auth])
 async def get_unread_messages(request: HttpRequest, response: HttpResponse):
-    cookies = request._cookies.get('Cookie')
-    if not cookies:
+
+    cookies_ = request.get_parsed_cookies()
+    user_id_ = cookies_.get('session')
+    if not user_id_:
         raise BadRequestDataError()
 
-    session_val = cookies.value
-    user_id_ = session_val.split('=')[1]
-
     messages = mgr.get_unread_user_messages(user_id=user_id_)
+
     response.status_code = 200
-    response.json = messages
+    response.json = [dataclasses.asdict(message) for message in messages]
+
+    return response
+
+
+@srv.route('/mark_messages_as_read', method=HTTPMethod.POST, middlewares=[check_auth])
+async def set_read_messages(request: HttpRequest, response: HttpResponse):
+    cookies_ = request.get_parsed_cookies()
+
+    mgr.set_messages_user_read_status(request.json, cookies_.get('session'))
+
+    response.status_code = 200
+
     return response
 
 

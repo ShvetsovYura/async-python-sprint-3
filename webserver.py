@@ -38,8 +38,6 @@ class WebServer:
         asyncio.create_task(mgr.users_store.dump_records())
         asyncio.create_task(mgr.rooms_store.dump_records())
 
-        # asyncio.gather(*[user.reset_message_count() for user in users_store.users])
-
         await asyncio.create_task(self._start_server())
 
     def route(self,
