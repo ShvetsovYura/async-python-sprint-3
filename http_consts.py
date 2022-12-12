@@ -3,6 +3,7 @@ from enum import Enum
 status_codes = {
     200: 'OK',
     201: 'Created',
+    202: 'Accepted',
     401: 'Unauthorized',
     403: 'Forbidden',
     404: 'Not found',

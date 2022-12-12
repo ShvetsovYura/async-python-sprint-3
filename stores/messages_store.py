@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
 from stores.base_store import BaseStore
 from stores.message import ChatMessage
@@ -24,3 +25,8 @@ class MessagesStore(BaseStore):
             lambda msg: msg.user_id == user_id and msg.created_at >= datetime.now() - timedelta(
                 minutes=20), self.messages)
         return len(list(messages_in_interval))
+
+    def get_messages(self, limit: Optional[int] = None):
+        if limit:
+            return self.messages[-limit:]
+        return self.messages

@@ -20,3 +20,4 @@ class ChatMessage:
     id_: str = field(default_factory=get_uuid)
     delivery_at: Union[datetime, None] = None
     created_at: datetime = field(default_factory=datetime.now)
+

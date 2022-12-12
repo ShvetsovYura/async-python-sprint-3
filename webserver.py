@@ -33,9 +33,11 @@ class WebServer:
 
     async def listen(self):
         logger.info(f'server start at {self._host}:{self._port}')
+
         asyncio.create_task(mgr.messages_store.dump_records())
         asyncio.create_task(mgr.users_store.dump_records())
         asyncio.create_task(mgr.rooms_store.dump_records())
+
         # asyncio.gather(*[user.reset_message_count() for user in users_store.users])
 
         await asyncio.create_task(self._start_server())
@@ -114,18 +116,14 @@ class WebServer:
     async def _handle_request(self, reader: StreamReader, writer: StreamWriter):
         response = HttpResponse()
         try:
-            logger.info(f's read: {datetime.now()}')
             raw_data = await self._read_stream(reader)
-            logger.info(f'e read: {datetime.now()}')
 
             if raw_data == b'':
                 writer.close()
                 return
 
             request = HttpRequest(raw_data)
-            logger.info(f's hand: {datetime.now()}')
             response = await self._handle_router(request)
-            logger.info(f'e hand: {datetime.now()}')
 
             await self._write_response(writer, response)
         except BadRequestDataError:

@@ -50,11 +50,13 @@ class DataManager(metaclass=SingletonType):
         self.messages_store.messages.append(message)
         user.increase_message_in_chat(message.chat_id)
 
-    def get_messages_for_user(self, user_id: str):
+    def get_unread_user_messages(self, user_id: str):
+        # пользователь по идентификатору
         user = self._users_store.get_user_by_id(user_id)
 
+        # непрочитанные сообщения для пользователя
         _unread_messages = filter(
             lambda msg: msg.chat_id in user.rooms and user_id not in msg.read_users,
-            self.messages_store.messages)
+            self.messages_store.get_messages())
 
         return list(_unread_messages)

@@ -56,7 +56,7 @@ class HttpResponse:
         self._headers.append(str(cookie_) + ';')
 
     @json.setter
-    def json(self, value: dict):
+    def json(self, value: Union[dict, list]):
         self._json = value
 
     def make_response(self) -> str:
@@ -66,7 +66,7 @@ class HttpResponse:
         if self.headers:
             _headers = '\r\n'.join(self._headers)
 
-        if self.json:
+        if self.json is not None:
             _body = json.dumps(self.json)
 
         raw_response = 'HTTP/1.1 {status} {status_str}\r\n{headers}\r\n\r\n{body}'.format(
