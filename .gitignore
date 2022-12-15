@@ -2,3 +2,6 @@
 .idea/
 __pycache__/
 *.pyc
+.venv
+tst_webserver.py
+data/*.json
