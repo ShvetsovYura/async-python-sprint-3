@@ -32,3 +32,10 @@ class RoomStore(BaseStore):
 
     def get_rooms_by_name(self, name: str) -> list[Room]:
         return list(filter(lambda r: r.name == name, self.records))
+
+    def get_room_by_id(self, id_: str):
+        rooms_ = list(filter(lambda r: r.id_ == id_, self.rooms))
+        if rooms_:
+            return rooms_[0]
+
+        return None

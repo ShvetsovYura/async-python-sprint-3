@@ -1,17 +1,26 @@
-from unittest import IsolatedAsyncioTestCase
+from datetime import datetime
+import json
+from unittest import TestCase
 
-from client import Client
-from server import Server
+from utils import json_object_hook, EnhancedJsonEncoder
 
 
-class TestConnection(IsolatedAsyncioTestCase):
+class TestUtils(TestCase):
 
-    async def test_con(self):
-        srv = Server()
+    def test_json_object_hook(self):
+        obj = {'created_at': '2022-12-12 16:25:14', 'text': 'test_text'}
+        result = json_object_hook(obj)
+        self.assertEqual({
+            'created_at': datetime(2022, 12, 12, 16, 25, 14),
+            'text': 'test_text',
+        }, result)
 
-        self.run(srv.listen())
+    def test_EnhancedJsonEncoder(self):
+        obj = {
+            'created_at': datetime(2022, 12, 12, 16, 25, 14),
+            'text': 'test_text',
+        }
 
-        client = Client(server_host='0.0.0.0')
-        await client.connect()
+        result = json.dumps(obj, cls=EnhancedJsonEncoder)
 
-        self.assertEqual(1, 1)
+        self.assertEqual('{"created_at": "2022-12-12 16:25:14", "text": "test_text"}', result)

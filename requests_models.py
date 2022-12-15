@@ -4,6 +4,16 @@ from typing import Optional
 
 
 @dataclass
+class RoomRequestModel:
+    chat_id: str
+
+
+@dataclass
+class ComplaintUserRequestModel(RoomRequestModel):
+    user_id: str
+
+
+@dataclass
 class SignInRequestModel:
     login: str
     password: str

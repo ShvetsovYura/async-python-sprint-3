@@ -2,7 +2,6 @@ import asyncio
 import logging
 import logging.config
 from asyncio.streams import StreamReader, StreamWriter
-from datetime import datetime
 from typing import Callable, Optional, TypedDict
 
 from exceptions import BadRequestDataError, NotAuthorizedError, ResponseError
@@ -34,9 +33,11 @@ class WebServer:
     async def listen(self):
         logger.info(f'server start at {self._host}:{self._port}')
 
+        # Задачи периодического сохранения информации в файлы
         asyncio.create_task(mgr.messages_store.dump_records())
         asyncio.create_task(mgr.users_store.dump_records())
         asyncio.create_task(mgr.rooms_store.dump_records())
+        asyncio.create_task(mgr.run_remove_messages_older_than())
 
         await asyncio.create_task(self._start_server())
 
@@ -47,7 +48,7 @@ class WebServer:
               **kwargs):
         """ Декоратор для связывания роута и обработчика """
 
-        def _route(_handler: Callable):
+        def _route(_handler: Callable) -> Callable:
             self._router[url] = {
                 'method': method,
                 'handler': _handler,
@@ -89,7 +90,7 @@ class WebServer:
             _handler = route.get('handler')
             _method = route.get('method')
             _middlewares = route.get('middlewares', [])
-            # _kwargs = route.get('kwargs')
+            # _kwargs = route.get('kwargs') # noqa E800
 
             if _method != request.method:
                 # если данный роут вызван с другим HTTP методом
@@ -111,8 +112,11 @@ class WebServer:
         writer.write(response.make_raw_response())
         await writer.drain()
 
-    async def _handle_request(self, reader: StreamReader, writer: StreamWriter):
+    async def _handle_request(self, reader: StreamReader, writer: StreamWriter) -> None:
+        """ Обработка входящего запроса от клиента """
+
         response = HttpResponse()
+
         try:
             raw_data = await self._read_stream(reader)
 
@@ -132,9 +136,7 @@ class WebServer:
             await self._write_response(writer, response=response)
         except ResponseError as e:
             await self._write_response(writer, e.response)
-        except Exception as e:
-            logger.debug(e)
-            logger.exception(e)
+        except Exception as e:    # noqa B902
+            logger.error(e)
         finally:
-            logger.info(f'f reqs: {datetime.now()}')
             writer.close()

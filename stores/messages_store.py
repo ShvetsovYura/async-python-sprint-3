@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -19,14 +18,10 @@ class MessagesStore(BaseStore):
     def messages(self) -> list[ChatMessage]:
         return self.records
 
-    def _get_send_user_messages_count_by_period(self, user_id: str):
-
-        messages_in_interval = filter(
-            lambda msg: msg.user_id == user_id and msg.created_at >= datetime.now() - timedelta(
-                minutes=20), self.messages)
-        return len(list(messages_in_interval))
-
     def get_messages(self, limit: Optional[int] = None):
         if limit:
             return self.messages[-limit:]
         return self.messages
+
+    def _set_messages(self, messages: list[ChatMessage]):
+        self._records = messages

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -9,3 +9,4 @@ class Room:
     owner: Optional[str] = None
     messages_in_period: int = 20
     period: float = 5
+    users: list[str] = field(default_factory=list)

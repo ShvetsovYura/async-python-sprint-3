@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Callable
 
-from encoders import EnhancedJsonEncoder
+from utils import EnhancedJsonEncoder, json_object_hook
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,10 @@ class BaseStore:
             if not _records:
                 return []
 
-            return [class_type(**record) for record in json.loads(_records)]
+            return [
+                class_type(**record)
+                for record in json.loads(_records, object_hook=json_object_hook)
+            ]
 
     def add_record(self, record):
         self._records.append(record)

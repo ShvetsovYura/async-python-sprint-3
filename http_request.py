@@ -1,4 +1,3 @@
-from ctypes import Union
 import json
 from http import cookies
 from typing import Optional
@@ -36,6 +35,10 @@ class HttpRequest:
     def json(self):
         return self._data
 
+    @property
+    def qs(self):
+        return self._qs
+
     def get_parsed_cookies(self) -> dict:
         parsed_cookies = {}
         if not self._cookies:
@@ -47,10 +50,6 @@ class HttpRequest:
                 parsed_cookies[splitted_values[0]] = splitted_values[1]
 
         return parsed_cookies
-
-    @property
-    def qs(self):
-        return self._qs
 
     def _parse_headers(self, headers: list[str]) -> list[dict[str, str]]:
         """ Парсинг заголовков HTTP запроса """

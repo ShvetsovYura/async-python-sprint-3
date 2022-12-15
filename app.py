@@ -1,9 +1,7 @@
 import asyncio
 import dataclasses
-import json
 import logging
 import logging.config
-from datetime import datetime
 
 import yaml
 
@@ -12,7 +10,9 @@ from http_consts import HTTPMethod
 from http_request import HttpRequest
 from http_response import HttpResponse
 from middlewares import check_auth
-from requests_models import (MessageRequestModel, SignInRequestModel, SingUpRequestModel)
+from requests_models import (ComplaintUserRequestModel, MessageRequestModel,
+                             RoomRequestModel, SignInRequestModel,
+                             SingUpRequestModel)
 from stores.data_manager import DataManager
 from stores.message import ChatMessage
 from webserver import WebServer
@@ -21,22 +21,13 @@ logger = logging.getLogger(__name__)
 
 mgr = DataManager()
 
-srv = WebServer(port=8008)
-
-
-@srv.route('/main', method=HTTPMethod.GET)
-async def handler(request: HttpRequest, response: HttpResponse) -> HttpResponse:
-    start = datetime.now()
-    await asyncio.sleep(10)
-    response.json = {'result': {'start': str(start), 'end': str(datetime.now())}}
-    response.set_cookie('pipa', 'oh-no')
-    return response
+srv = WebServer()
 
 
 @srv.route('/signin', method=HTTPMethod.POST)
 async def sign_in(request: HttpRequest, response: HttpResponse):
     try:
-        user_req = SignInRequestModel(**request.json)
+        user_req = SignInRequestModel(**request.json)    # type: ignore
     except TypeError:
         raise BadRequestDataError
 
@@ -64,7 +55,8 @@ async def send_message(request: HttpRequest, response: HttpResponse):
         raise BadRequestDataError
 
     try:
-        message = MessageRequestModel(chat_id=chat_id[0], user_id=user_id, **request.json)
+        message = MessageRequestModel(chat_id=chat_id[0], user_id=user_id,
+                                      **request.json)    # type: ignore
     except TypeError as e:
         logger.exception(e)
         raise BadRequestDataError
@@ -79,7 +71,7 @@ async def send_message(request: HttpRequest, response: HttpResponse):
 async def sign_up(request: HttpRequest, response: HttpResponse):
 
     try:
-        request_model = SingUpRequestModel(**request.json)
+        request_model = SingUpRequestModel(**request.json)    # type: ignore
     except TypeError:
         raise BadRequestDataError
 
@@ -110,10 +102,38 @@ async def get_unread_messages(request: HttpRequest, response: HttpResponse):
 async def set_read_messages(request: HttpRequest, response: HttpResponse):
     cookies_ = request.get_parsed_cookies()
 
-    mgr.set_messages_user_read_status(request.json, cookies_.get('session'))
+    mgr.set_messages_user_read_status(*[request.json, cookies_.get('session')])
 
     response.status_code = 200
 
+    return response
+
+
+@srv.route('/leave_room', method=HTTPMethod.POST, middlewares=[check_auth])
+async def user_leave_room(request: HttpRequest, respose: HttpResponse):
+    cookies_ = request.get_parsed_cookies()
+
+    try:
+        model = RoomRequestModel(**request.json)    # type: ignore
+    except TypeError:
+        raise BadRequestDataError
+
+    mgr.remove_user_from_chat(cookies_.get('session', ''), model.chat_id)
+
+
+@srv.route('/complaint', method=HTTPMethod.POST, middlewares=[check_auth])
+async def complaint_to_user(request: HttpRequest, response: HttpResponse):
+
+    try:
+        model = ComplaintUserRequestModel(**request.json)    # type: ignore
+    except TypeError:
+        raise BadRequestDataError
+
+    user = mgr.users_store.get_user_by_id(model.user_id)
+
+    user.set_complaint()
+
+    response.status_code = 201
     return response
 
 
@@ -124,5 +144,14 @@ if __name__ == '__main__':
     logging.config.dictConfig(cfg.get('logging'))
     asyncio.run(srv.listen())
 
-# TODO: Почему обработчики не вызываются конкурентно?
-# TODO: Наверно нужно было делать на web-сокетах, но уже слишком поздно переделывать
+# Привет дорогой мой ревьювер!
+# Я решил не искть легких путей и реализовать самый сложный пункт заданий
+# для этого пришлось переписать пару-тройку раз все, но это лишь повышает жароустройчивость
+
+# сейчас делаю клиента и тесты, но решил сдать на 1ый ревью чтобы понять в ту ли сторону двигаюсь вообще,
+# может нужно было вообще web-сокеты поверх http делать...
+# И чтобы усилить накал - искренне прошу тебя провести максимально жесткое ревью
+# Прошу не стесняться в выражениях, а также побольше бест практис - буду крайне благодарен
+#
+
+# С уважением, паадван.
