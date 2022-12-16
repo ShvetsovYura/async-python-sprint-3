@@ -2,6 +2,7 @@ import asyncio
 import logging
 import logging.config
 from asyncio.streams import StreamReader, StreamWriter
+from http import HTTPStatus
 from typing import Callable, Optional, TypedDict
 
 from exceptions import BadRequestDataError, NotAuthorizedError, ResponseError
@@ -85,7 +86,7 @@ class WebServer:
 
         if not route:
             # если не найдено роута
-            response.status_code = 404
+            response.status_code = HTTPStatus.NOT_FOUND
         else:
             _handler = route.get('handler')
             _method = route.get('method')
@@ -94,7 +95,7 @@ class WebServer:
 
             if _method != request.method:
                 # если данный роут вызван с другим HTTP методом
-                response.status_code = 405
+                response.status_code = HTTPStatus.METHOD_NOT_ALLOWED
 
             for middleware in _middlewares:
                 request, response = await middleware(request, response)
@@ -108,7 +109,12 @@ class WebServer:
     async def _accept_request(self, reader: StreamReader, writer: StreamWriter):
         asyncio.create_task(self._handle_request(reader, writer))
 
-    async def _write_response(self, writer: StreamWriter, response: HttpResponse):
+    async def _write_response(self,
+                              writer: StreamWriter,
+                              response: HttpResponse,
+                              status_code: Optional[HTTPStatus] = None):
+        if status_code:
+            response.status_code = status_code
         writer.write(response.make_raw_response())
         await writer.drain()
 
@@ -129,11 +135,9 @@ class WebServer:
 
             await self._write_response(writer, response)
         except BadRequestDataError:
-            response.status_code = 422
-            await self._write_response(writer, response=response)
+            await self._write_response(writer, response, HTTPStatus.UNPROCESSABLE_ENTITY)
         except NotAuthorizedError:
-            response.status_code = 401
-            await self._write_response(writer, response=response)
+            await self._write_response(writer, response, HTTPStatus.UNAUTHORIZED)
         except ResponseError as e:
             await self._write_response(writer, e.response)
         except Exception as e:    # noqa B902

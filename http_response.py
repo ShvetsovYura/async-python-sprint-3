@@ -1,10 +1,8 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from http import cookies
+from http import HTTPStatus, cookies
 from typing import Union
-
-from http_consts import status_codes
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +10,7 @@ logger = logging.getLogger(__name__)
 class HttpResponse:
 
     def __init__(self) -> None:
-        self._status_code = 200
+        self._status_code = HTTPStatus.OK
         self._headers: list[str] = []
         self._json = None
 
@@ -29,7 +27,7 @@ class HttpResponse:
         return self._json
 
     @status_code.setter
-    def status_code(self, value: int):
+    def status_code(self, value: HTTPStatus):
         self._status_code = value
 
     def add_header(self, header: dict[str, str]):
@@ -39,11 +37,12 @@ class HttpResponse:
     def set_cookie(self,
                    key: str,
                    value: str,
-                   httpOnly: bool = True,
+                   http_only: bool = True,
                    expires: Union[str, datetime, timedelta] = 'session'):
         cookie_ = cookies.SimpleCookie()
         cookie_[key] = value
 
+        # Определение, как было установлено время жизни кук
         if isinstance(expires, datetime):
             cookie_[key]['expires'] = expires.strftime('%a, %d %b %Y %H:%M:%S')
         elif isinstance(expires, timedelta):
@@ -51,7 +50,7 @@ class HttpResponse:
         else:
             cookie_[key]['expires'] = expires
 
-        cookie_[key]['httponly'] = httpOnly
+        cookie_[key]['httponly'] = http_only
 
         self._headers.append(str(cookie_) + ';')
 
@@ -71,7 +70,7 @@ class HttpResponse:
 
         raw_response = 'HTTP/1.1 {status} {status_str}\r\n{headers}\r\n\r\n{body}'.format(
             status=self.status_code,
-            status_str=status_codes[self.status_code],
+            status_str=str(self.status_code),
             headers=_headers,
             body=_body)
 
