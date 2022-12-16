@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import logging
 import logging.config
+from http import HTTPStatus
 
 import yaml
 
@@ -20,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 mgr = DataManager()
 
-srv = WebServer()
+webapp = WebServer()
 
 
-@srv.route('/signin', method=HTTPMethod.POST)
+@webapp.route('/signin', method=HTTPMethod.POST)
 async def sign_in(request: HttpRequest, response: HttpResponse):
     try:
         user_req = SignInRequestModel(**request.json)    # type: ignore
@@ -37,11 +38,11 @@ async def sign_in(request: HttpRequest, response: HttpResponse):
     user_.check_login_password(user_req.login, user_req.password)
     response.set_cookie('session', user_.id_)
 
-    response.status_code = 202
+    response.status_code = HTTPStatus.ACCEPTED
     return response
 
 
-@srv.route('/send_message', method=HTTPMethod.POST, middlewares=[check_auth])
+@webapp.route('/send_message', method=HTTPMethod.POST, middlewares=[check_auth])
 async def send_message(request: HttpRequest, response: HttpResponse):
 
     chat_id = request.qs.get('chat_id')
@@ -62,11 +63,11 @@ async def send_message(request: HttpRequest, response: HttpResponse):
 
     mgr.add_message(ChatMessage(**dataclasses.asdict(message)))
 
-    response.status_code = 201
+    response.status_code = HTTPStatus.CREATED
     return response
 
 
-@srv.route('/signup', method=HTTPMethod.POST)
+@webapp.route('/signup', method=HTTPMethod.POST)
 async def sign_up(request: HttpRequest, response: HttpResponse):
 
     try:
@@ -76,12 +77,13 @@ async def sign_up(request: HttpRequest, response: HttpResponse):
 
     mgr.add_user(login=request_model.login, name=request_model.name, pwd=request_model.password)
 
-    response.status_code = 201
     messages = mgr.messages_store.get_messages(20)
+
+    response.status_code = HTTPStatus.CREATED
     return messages
 
 
-@srv.route('/get_unread_messages', method=HTTPMethod.GET, middlewares=[check_auth])
+@webapp.route('/get_unread_messages', method=HTTPMethod.GET, middlewares=[check_auth])
 async def get_unread_messages(request: HttpRequest, response: HttpResponse):
 
     cookies_ = request.get_parsed_cookies()
@@ -91,24 +93,23 @@ async def get_unread_messages(request: HttpRequest, response: HttpResponse):
 
     messages = mgr.get_unread_user_messages(user_id=user_id_)
 
-    response.status_code = 200
+    response.status_code = HTTPStatus.OK
     response.json = [dataclasses.asdict(message) for message in messages]
 
     return response
 
 
-@srv.route('/mark_messages_as_read', method=HTTPMethod.POST, middlewares=[check_auth])
+@webapp.route('/mark_messages_as_read', method=HTTPMethod.POST, middlewares=[check_auth])
 async def set_read_messages(request: HttpRequest, response: HttpResponse):
     cookies_ = request.get_parsed_cookies()
 
     mgr.set_messages_user_read_status(*[request.json, cookies_.get('session')])
 
-    response.status_code = 200
-
+    response.status_code = HTTPStatus.OK
     return response
 
 
-@srv.route('/leave_room', method=HTTPMethod.POST, middlewares=[check_auth])
+@webapp.route('/leave_room', method=HTTPMethod.POST, middlewares=[check_auth])
 async def user_leave_room(request: HttpRequest, respose: HttpResponse):
     cookies_ = request.get_parsed_cookies()
 
@@ -120,7 +121,7 @@ async def user_leave_room(request: HttpRequest, respose: HttpResponse):
     mgr.remove_user_from_chat(cookies_.get('session', ''), model.chat_id)
 
 
-@srv.route('/complaint', method=HTTPMethod.POST, middlewares=[check_auth])
+@webapp.route('/complaint', method=HTTPMethod.POST, middlewares=[check_auth])
 async def complaint_to_user(request: HttpRequest, response: HttpResponse):
 
     try:
@@ -132,7 +133,7 @@ async def complaint_to_user(request: HttpRequest, response: HttpResponse):
 
     user.set_complaint()
 
-    response.status_code = 201
+    response.status_code = HTTPStatus.CREATED
     return response
 
 
@@ -141,7 +142,7 @@ if __name__ == '__main__':
         cfg = yaml.safe_load(stream)
 
     logging.config.dictConfig(cfg.get('logging'))
-    asyncio.run(srv.listen())
+    asyncio.run(webapp.listen())
 
 # Привет дорогой мой ревьювер!
 # Я решил не искть легких путей и реализовать самый сложный пункт заданий
