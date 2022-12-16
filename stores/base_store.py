@@ -4,7 +4,8 @@ import json
 import logging
 from typing import Callable
 
-from utils import EnhancedJsonEncoder, json_object_hook
+from utils.decoders import json_object_hook
+from utils.encoders import EnhancedJsonEncoder
 
 logger = logging.getLogger(__name__)
 

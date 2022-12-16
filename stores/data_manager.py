@@ -74,9 +74,13 @@ class DataManager(metaclass=SingletonType):
         # а также пользвоатель состоит в списке этого чата
         user_rooms = self.get_user_rooms(user_id)
 
-        _unread_messages = filter(
-            lambda msg: msg.chat_id in user_rooms and user_id not in msg.read_users and user_id !=
-            msg.user_id, self.messages_store.get_messages())
+        def unread_messages_predicate(message: ChatMessage):
+            if (message.chat_id in user_rooms) and (user_id not in message.read_users) and (
+                    user_id != message.user_id):
+                return True
+            return False
+
+        _unread_messages = filter(unread_messages_predicate, self.messages_store.get_messages())
 
         return list(_unread_messages)
 
@@ -86,12 +90,13 @@ class DataManager(metaclass=SingletonType):
                                             back_period_sec: int = 300) -> int:
         """ Количество сообщений за период от пользователя в определенном чате """
 
-        return len(
-            list(
-                filter(
-                    lambda m: m.chat_id == room_id and m.user_id == user_id and m.created_at >
-                    datetime.now() - timedelta(seconds=back_period_sec),
-                    self.messages_store.messages)))
+        def user_messages_in_room_predicate(message: ChatMessage):
+            if (message.chat_id == room_id) and (message.user_id == user_id) and (
+                    message.created_at > datetime.now() - timedelta(seconds=back_period_sec)):
+                return True
+            return False
+
+        return len(list(filter(user_messages_in_room_predicate, self.messages_store.messages)))
 
     def set_messages_user_read_status(self, messages_ids: list[str], user_id: str):
         for msg in self.messages_store.messages:

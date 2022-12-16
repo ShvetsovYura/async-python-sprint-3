@@ -10,9 +10,8 @@ from http_consts import HTTPMethod
 from http_request import HttpRequest
 from http_response import HttpResponse
 from middlewares import check_auth
-from requests_models import (ComplaintUserRequestModel, MessageRequestModel,
-                             RoomRequestModel, SignInRequestModel,
-                             SingUpRequestModel)
+from requests_models import (ComplaintUserRequestModel, MessageRequestModel, RoomRequestModel,
+                             SignInRequestModel, SingUpRequestModel)
 from stores.data_manager import DataManager
 from stores.message import ChatMessage
 from webserver import WebServer
@@ -148,7 +147,8 @@ if __name__ == '__main__':
 # Я решил не искть легких путей и реализовать самый сложный пункт заданий
 # для этого пришлось переписать пару-тройку раз все, но это лишь повышает жароустройчивость
 
-# сейчас делаю клиента и тесты, но решил сдать на 1ый ревью чтобы понять в ту ли сторону двигаюсь вообще,
+# сейчас делаю клиента и тесты, но решил сдать на 1ый ревью,
+# чтобы понять в ту ли сторону двигаюсь вообще,
 # может нужно было вообще web-сокеты поверх http делать...
 # И чтобы усилить накал - искренне прошу тебя провести максимально жесткое ревью
 # Прошу не стесняться в выражениях, а также побольше бест практис - буду крайне благодарен
