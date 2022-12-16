@@ -16,14 +16,14 @@ class BaseStore:
                  path,
                  class_type: Callable,
                  dump_timeout: int = 60,
-                 init_storage: bool = True):
+                 init_file_storage: bool = True):
         self._path = path
 
         self._dump_timeout = dump_timeout
         self._class_type = class_type
         self._records = []
 
-        if init_storage:
+        if init_file_storage:
             if not self._path.exists():
                 with open(self._path, 'w+') as file:
                     file.write(json.dumps([]))

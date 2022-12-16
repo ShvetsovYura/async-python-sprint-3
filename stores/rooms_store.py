@@ -2,7 +2,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from exceptions import RoomNameExistsUsedError
+from exceptions import RoomNameAlreadyExistsError
 from stores.base_store import BaseStore
 from stores.room import Room
 
@@ -13,8 +13,10 @@ default_room = Room(id_='edb74300-247c-494a-9eed-308d69667ff3', name='public')
 
 class RoomStore(BaseStore):
 
-    def __init__(self):
-        super().__init__(Path(__file__).resolve().parent.parent / 'data/rooms.json', Room)
+    path_to_file = Path(__file__).resolve().parent.parent / 'data/rooms.json'
+
+    def __init__(self, init_file: bool = True):
+        super().__init__(self.path_to_file, Room, init_file_storage=init_file)
 
         if not self.records:
             self.add_record(default_room)
@@ -23,12 +25,12 @@ class RoomStore(BaseStore):
     def rooms(self) -> list[Room]:
         return self.records
 
-    def add_room(self, name: str, user: str):
+    def add_room(self, name: str, owner_id: str):
         rooms_ = self.get_rooms_by_name(name)
         if rooms_:
-            raise RoomNameExistsUsedError()
+            raise RoomNameAlreadyExistsError()
 
-        self.records.append(Room(id_=str(uuid.uuid4()), name=name, owner=user))
+        self.records.append(Room(id_=str(uuid.uuid4()), name=name, owner=owner_id))
 
     def get_rooms_by_name(self, name: str) -> list[Room]:
         return list(filter(lambda r: r.name == name, self.records))
