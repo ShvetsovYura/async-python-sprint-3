@@ -141,6 +141,6 @@ class WebServer:
         except ResponseError as e:
             await self._write_response(writer, e.response)
         except Exception as e:    # noqa B902
-            logger.error(e)
+            logger.exception(e)
         finally:
             writer.close()
