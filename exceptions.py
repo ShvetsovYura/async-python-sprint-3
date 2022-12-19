@@ -28,7 +28,7 @@ class BadRequestDataError(Exception):
     pass
 
 
-class RoomNameExistsUsedError(Exception):
+class RoomNameAlreadyExistsError(Exception):
     pass
 
 

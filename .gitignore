@@ -5,3 +5,5 @@ __pycache__/
 .venv
 tst_webserver.py
 data/*.json
+.vscode/
+.pytest_cache/

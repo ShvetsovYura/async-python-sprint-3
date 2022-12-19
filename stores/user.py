@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -16,7 +15,6 @@ class User:
     id_: str
     name: str
     password: str
-    # rooms: list[str]
 
     login: str = 'user'
     blocked_in_chats: dict[str, Optional[datetime]] = field(default_factory=get_default_blocks)
@@ -51,18 +49,3 @@ class User:
         if login == self.login and password == self.password:
             return True
         return False
-
-    async def check_blocked(self, timeout=20.0):
-        """ Проверка времени для разблокироваки пользователя """
-
-        while True:
-            await asyncio.sleep(1)
-
-            async with asyncio.Lock():
-
-                if not self.blocked:
-                    continue
-                if self.blocked + timedelta(seconds=timeout) < datetime.now():
-                    logger.info(f'unblock user: {self.name}')
-                    self.blocked = None
-                    self.messages_in_period = 0

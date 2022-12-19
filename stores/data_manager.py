@@ -1,22 +1,26 @@
 import asyncio
-import uuid
 from datetime import datetime, timedelta
+from typing import Optional
 
 from exceptions import OverflowSendMessagesUserBlocked, UserLoginAlreadyExists
 from stores.message import ChatMessage
 from stores.messages_store import MessagesStore
-from stores.rooms_store import RoomStore
-from stores.singleton import SingletonType
+from stores.rooms_store import RoomsStore
 from stores.user import User
 from stores.users_store import UsersStore
 
 
-class DataManager(metaclass=SingletonType):
+class DataManager:
 
-    def __init__(self, older_than_mins=20) -> None:
-        self._users_store = UsersStore()
-        self._room_store = RoomStore()
-        self._messages_store = MessagesStore()
+    def __init__(self,
+                 users_store: UsersStore,
+                 rooms_store: RoomsStore,
+                 messages_store: MessagesStore,
+                 older_than_mins=20) -> None:
+
+        self._users_store = users_store
+        self._rooms_store = rooms_store
+        self._messages_store = messages_store
         self._older_than_mins = older_than_mins
 
     @property
@@ -25,7 +29,7 @@ class DataManager(metaclass=SingletonType):
 
     @property
     def rooms_store(self):
-        return self._room_store
+        return self._rooms_store
 
     @property
     def messages_store(self):
@@ -36,21 +40,21 @@ class DataManager(metaclass=SingletonType):
         if room:
             return room.users
 
-    def add_user(self, login: str, name: str, pwd: str):
+    def create_user(self, login: str, name: str, pwd: str) -> User:
         """ Создание нового пользователя, по-умолчанию доабвляется в `public` """
-        users_ = self.users_store.get_users_by_login(login)
-        if users_:
+        user_ = self.users_store.get_user_by_login(login)
+        if user_:
             raise UserLoginAlreadyExists()
 
-        new_user = User(id_=str(uuid.uuid4()), name=name, login=login, password=pwd)
-        self.users_store.add_user(new_user)
+        new_user = self.users_store.crate_new_user(name, login, pwd)
 
         rooms = self.rooms_store.get_rooms_by_name('public')
         for room_ in rooms:
             room_.users.append(new_user.id_)
+        return new_user
 
     def get_room_by_id(self, room_id):
-        return self._room_store.get_room_by_id(room_id)
+        return self._rooms_store.get_room_by_id(room_id)
 
     def add_message(self, message: ChatMessage):
         user = self.users_store.get_user_by_id(message.user_id)
@@ -65,7 +69,7 @@ class DataManager(metaclass=SingletonType):
         self.messages_store.messages.append(message)
 
     def get_user_rooms(self, user_id):
-        return list(filter(lambda room: user_id in room.users, self._room_store.rooms))
+        return list(filter(lambda room: user_id in room.users, self._rooms_store.rooms))
 
     def get_unread_user_messages(self, user_id: str):
         # непрочитанные сообщения для пользователя
@@ -74,9 +78,13 @@ class DataManager(metaclass=SingletonType):
         # а также пользвоатель состоит в списке этого чата
         user_rooms = self.get_user_rooms(user_id)
 
-        _unread_messages = filter(
-            lambda msg: msg.chat_id in user_rooms and user_id not in msg.read_users and user_id !=
-            msg.user_id, self.messages_store.get_messages())
+        def unread_messages_predicate(message: ChatMessage):
+            if (message.chat_id in user_rooms) and (user_id not in message.read_users) and (
+                    user_id != message.user_id):
+                return True
+            return False
+
+        _unread_messages = filter(unread_messages_predicate, self.messages_store.get_messages())
 
         return list(_unread_messages)
 
@@ -86,14 +94,15 @@ class DataManager(metaclass=SingletonType):
                                             back_period_sec: int = 300) -> int:
         """ Количество сообщений за период от пользователя в определенном чате """
 
-        return len(
-            list(
-                filter(
-                    lambda m: m.chat_id == room_id and m.user_id == user_id and m.created_at >
-                    datetime.now() - timedelta(seconds=back_period_sec),
-                    self.messages_store.messages)))
+        def user_messages_in_room_predicate(message: ChatMessage):
+            if (message.chat_id == room_id) and (message.user_id == user_id) and (
+                    message.created_at > datetime.now() - timedelta(seconds=back_period_sec)):
+                return True
+            return False
 
-    def set_messages_user_read_status(self, messages_ids: list[str], user_id: str):
+        return len(list(filter(user_messages_in_room_predicate, self.messages_store.messages)))
+
+    def set_read_messages_by_user(self, messages_ids: list[str], user_id: str):
         for msg in self.messages_store.messages:
             for message_id in messages_ids:
 
@@ -105,13 +114,15 @@ class DataManager(metaclass=SingletonType):
             await asyncio.sleep(60)
             self.remove_messages_older_than()
 
-    def remove_messages_older_than(self):
-        data = list(
-            filter(
-                lambda msg: msg.created_at < datetime.now() - timedelta(
-                    minutes=self._older_than_mins), self.messages_store.messages))
+    def remove_messages_older_than(self, interval: Optional[timedelta] = None):
 
-        self.messages_store._set_messages(data)
+        remove_after = interval if interval else timedelta(minutes=self._older_than_mins)
+
+        data = list(
+            filter(lambda msg: msg.created_at > datetime.now() - remove_after,
+                   self.messages_store.messages))
+
+        self.messages_store.set_messages(data)
 
     def remove_user_from_chat(self, user_id: str, room_id: str):
         room = self.get_room_by_id(room_id)

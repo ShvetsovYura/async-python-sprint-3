@@ -1,8 +1,9 @@
-from datetime import datetime
 import json
+from datetime import datetime
 from unittest import TestCase
 
-from utils import json_object_hook, EnhancedJsonEncoder
+from utils.decoders import json_object_hook
+from utils.encoders import EnhancedJsonEncoder
 
 
 class TestUtils(TestCase):

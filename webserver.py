@@ -2,42 +2,45 @@ import asyncio
 import logging
 import logging.config
 from asyncio.streams import StreamReader, StreamWriter
+from http import HTTPStatus
 from typing import Callable, Optional, TypedDict
 
 from exceptions import BadRequestDataError, NotAuthorizedError, ResponseError
 from http_consts import HTTPMethod
 from http_request import HttpRequest
 from http_response import HttpResponse
+from settings import AppSettings
 from stores.data_manager import DataManager
 
+# logger используется
 logger = logging.getLogger(__name__)
-
-mgr = DataManager()
 
 
 class RouteData(TypedDict):
     method: HTTPMethod
     handler: Callable
     middlewares: list[Callable]
-    kwargs: dict
 
 
 class WebServer:
     """ Кастомная реализация web-сервера в упрощенном виде """
 
-    def __init__(self, host='127.0.0.1', port=8000):
-        self._host = host
-        self._port = port
+    def __init__(self, data_manager: DataManager):
+        settings = AppSettings()    # type: ignore
+        self._host = settings.host
+        self._port = settings.port
+        self._prefix = settings.prefix
+        self._data_mgr = data_manager
         self._router: dict[str, RouteData] = {}
 
     async def listen(self):
         logger.info(f'server start at {self._host}:{self._port}')
 
         # Задачи периодического сохранения информации в файлы
-        asyncio.create_task(mgr.messages_store.dump_records())
-        asyncio.create_task(mgr.users_store.dump_records())
-        asyncio.create_task(mgr.rooms_store.dump_records())
-        asyncio.create_task(mgr.run_remove_messages_older_than())
+        asyncio.create_task(self._data_mgr.messages_store.dump_records())
+        asyncio.create_task(self._data_mgr.users_store.dump_records())
+        asyncio.create_task(self._data_mgr.rooms_store.dump_records())
+        asyncio.create_task(self._data_mgr.run_remove_messages_older_than())
 
         await asyncio.create_task(self._start_server())
 
@@ -49,11 +52,11 @@ class WebServer:
         """ Декоратор для связывания роута и обработчика """
 
         def _route(_handler: Callable) -> Callable:
-            self._router[url] = {
+            full_url = f'{self._prefix}{url}'
+            self._router[full_url] = {
                 'method': method,
                 'handler': _handler,
                 'middlewares': middlewares or [],
-                'kwargs': kwargs,
             }
             return _handler
 
@@ -85,16 +88,15 @@ class WebServer:
 
         if not route:
             # если не найдено роута
-            response.status_code = 404
+            response.status_code = HTTPStatus.NOT_FOUND
         else:
             _handler = route.get('handler')
             _method = route.get('method')
             _middlewares = route.get('middlewares', [])
-            # _kwargs = route.get('kwargs') # noqa E800
 
             if _method != request.method:
                 # если данный роут вызван с другим HTTP методом
-                response.status_code = 405
+                response.status_code = HTTPStatus.METHOD_NOT_ALLOWED
 
             for middleware in _middlewares:
                 request, response = await middleware(request, response)
@@ -108,7 +110,12 @@ class WebServer:
     async def _accept_request(self, reader: StreamReader, writer: StreamWriter):
         asyncio.create_task(self._handle_request(reader, writer))
 
-    async def _write_response(self, writer: StreamWriter, response: HttpResponse):
+    async def _write_response(self,
+                              writer: StreamWriter,
+                              response: HttpResponse,
+                              status_code: Optional[HTTPStatus] = None):
+        if status_code:
+            response.status_code = status_code
         writer.write(response.make_raw_response())
         await writer.drain()
 
@@ -129,14 +136,12 @@ class WebServer:
 
             await self._write_response(writer, response)
         except BadRequestDataError:
-            response.status_code = 422
-            await self._write_response(writer, response=response)
+            await self._write_response(writer, response, HTTPStatus.UNPROCESSABLE_ENTITY)
         except NotAuthorizedError:
-            response.status_code = 401
-            await self._write_response(writer, response=response)
+            await self._write_response(writer, response, HTTPStatus.UNAUTHORIZED)
         except ResponseError as e:
             await self._write_response(writer, e.response)
         except Exception as e:    # noqa B902
-            logger.error(e)
+            logger.exception(e)
         finally:
             writer.close()

@@ -4,24 +4,31 @@ import json
 import logging
 from typing import Callable
 
-from utils import EnhancedJsonEncoder, json_object_hook
+from utils.decoders import json_object_hook
+from utils.encoders import EnhancedJsonEncoder
 
 logger = logging.getLogger(__name__)
 
 
 class BaseStore:
 
-    def __init__(self, path, class_type: Callable, dump_timeout: int = 60):
+    def __init__(self,
+                 path,
+                 class_type: Callable,
+                 dump_timeout: int = 60,
+                 init_file_storage: bool = True):
         self._path = path
 
         self._dump_timeout = dump_timeout
         self._class_type = class_type
+        self._records = []
 
-        if not self._path.exists():
-            with open(self._path, 'w+') as file:
-                file.write(json.dumps([]))
+        if init_file_storage:
+            if not self._path.exists():
+                with open(self._path, 'w+') as file:
+                    file.write(json.dumps([]))
 
-        self._records = self.read_records_from_storage(path, class_type)
+            self._records = self.read_records_from_storage(path, class_type)
 
     @property
     def records(self) -> list:
