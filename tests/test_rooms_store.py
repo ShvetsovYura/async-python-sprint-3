@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from exceptions import RoomNameAlreadyExistsError
-from stores.rooms_store import RoomStore
+from stores.rooms_store import RoomsStore
 
 
 class TestRoomStore(TestCase):
@@ -9,7 +9,7 @@ class TestRoomStore(TestCase):
     def setUp(self) -> None:
         super().setUp()
 
-        self.room_store = RoomStore(False)
+        self.room_store = RoomsStore(False)
 
     def test_init_count_in_store(self):
         self.assertEqual(1, len(self.room_store.rooms))

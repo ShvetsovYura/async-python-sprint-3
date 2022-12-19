@@ -8,18 +8,17 @@ from stores.room import Room
 
 logger = logging.getLogger(__name__)
 
-default_room = Room(id_='edb74300-247c-494a-9eed-308d69667ff3', name='public')
 
-
-class RoomStore(BaseStore):
+class RoomsStore(BaseStore):
 
     path_to_file = Path(__file__).resolve().parent.parent / 'data/rooms.json'
+    default_room = Room(id_='edb74300-247c-494a-9eed-308d69667ff3', name='public')
 
     def __init__(self, init_file: bool = True):
         super().__init__(self.path_to_file, Room, init_file_storage=init_file)
 
         if not self.records:
-            self.add_record(default_room)
+            self.add_record(self.default_room)
 
     @property
     def rooms(self) -> list[Room]:

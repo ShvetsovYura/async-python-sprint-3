@@ -15,11 +15,16 @@ from requests_models import (ComplaintUserRequestModel, MessageRequestModel, Roo
                              SignInRequestModel, SingUpRequestModel)
 from stores.data_manager import DataManager
 from stores.message import ChatMessage
+from stores.messages_store import MessagesStore
+from stores.rooms_store import RoomsStore
+from stores.users_store import UsersStore
 from webserver import WebServer
 
 logger = logging.getLogger(__name__)
 
-mgr = DataManager()
+mgr = DataManager(users_store=UsersStore(),
+                  rooms_store=RoomsStore(),
+                  messages_store=MessagesStore())
 
 webapp = WebServer()
 
@@ -31,10 +36,10 @@ async def sign_in(request: HttpRequest, response: HttpResponse):
     except TypeError:
         raise BadRequestDataError
 
-    users_ = mgr.users_store.get_users_by_login(user_req.login)
-    if not users_:
+    user_ = mgr.users_store.get_user_by_login(user_req.login)
+    if not user_:
         raise UserNotFoundError
-    user_ = users_[0]
+
     user_.check_login_password(user_req.login, user_req.password)
     response.set_cookie('session', user_.id_)
 
@@ -75,7 +80,7 @@ async def sign_up(request: HttpRequest, response: HttpResponse):
     except TypeError:
         raise BadRequestDataError
 
-    mgr.add_user(login=request_model.login, name=request_model.name, pwd=request_model.password)
+    mgr.create_user(login=request_model.login, name=request_model.name, pwd=request_model.password)
 
     messages = mgr.messages_store.get_messages(20)
 
@@ -103,7 +108,7 @@ async def get_unread_messages(request: HttpRequest, response: HttpResponse):
 async def set_read_messages(request: HttpRequest, response: HttpResponse):
     cookies_ = request.get_parsed_cookies()
 
-    mgr.set_messages_user_read_status(*[request.json, cookies_.get('session')])
+    mgr.set_read_messages_by_user(*[request.json, cookies_.get('session')])
 
     response.status_code = HTTPStatus.OK
     return response
