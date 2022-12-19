@@ -122,7 +122,7 @@ class DataManager:
             filter(lambda msg: msg.created_at > datetime.now() - remove_after,
                    self.messages_store.messages))
 
-        self.messages_store._set_messages(data)
+        self.messages_store.set_messages(data)
 
     def remove_user_from_chat(self, user_id: str, room_id: str):
         room = self.get_room_by_id(room_id)

@@ -23,7 +23,7 @@ class MessagesStore(BaseStore):
             return self.messages[-limit:]
         return self.messages
 
-    def _set_messages(self, messages: list[ChatMessage]):
+    def set_messages(self, messages: list[ChatMessage]):
         self._records = messages
 
     def _clear(self):

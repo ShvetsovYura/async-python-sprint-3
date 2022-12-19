@@ -2,7 +2,15 @@
 
 Python >= 3.9
 
-для разработки необходимо:
+## Запуск приложения
+
+1. Склонировать репо
+2. Перейти в директорию склонированного проека
+3. Установить зависимости `python3 -m pip install requirements.txt`
+4. Запусить проложение `python3 -m app`
+
+## Подготовака для разработки
+
 Установить глобально `pre-commit`
 
     $ python3 -m pip install --user pre-commit
@@ -19,6 +27,13 @@ Python >= 3.9
 Инициализировать `pre-commit`
 
     $ pre-commit init
+
+Установить зависимости: 
+
+    $ pip install -r requirements.dev.txt
+
+
+    $ pip install -r requirements.txt
 
 Запуск тестов и вывод результатов в консоль:
 
